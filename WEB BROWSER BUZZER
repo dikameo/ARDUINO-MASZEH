@@ -1,0 +1,80 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+#define BUZZER_PIN 13
+
+const char* ssid = "Banyu Langit";
+const char* password = "098765432";
+
+WebServer server(80);
+bool buzzerState = false;
+
+void handleRoot() {
+  String html = "<!DOCTYPE html><html><head><title>Buzzer IoT</title></head><body style='text-align:center;font-family:sans-serif;'>";
+  html += "<h2>Kontrol Buzzer ESP32</h2>";
+  html += buzzerState ? "<p>Status: <b style='color:green;'>ON</b></p>" : "<p>Status: <b style='color:red;'>OFF</b></p>";
+  html += "<form action='/on' method='GET'><button style='padding:10px 20px;margin:10px;'>ON</button></form>";
+  html += "<form action='/off' method='GET'><button style='padding:10px 20px;margin:10px;'>OFF</button></form>";
+  html += "</body></html>";
+  server.send(200, "text/html", html);
+}
+
+void handleOn() {
+  digitalWrite(BUZZER_PIN, HIGH);
+  buzzerState = true;
+  Serial.println("Buzzer: ON");
+  handleRoot();
+}
+
+void handleOff() {
+  digitalWrite(BUZZER_PIN, LOW);
+  buzzerState = false;
+  Serial.println("Buzzer: OFF");
+  handleRoot();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  Serial.print("Menghubungkan ke WiFi: ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 30) {
+    delay(500);
+    Serial.print(".");
+    retries++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ WiFi Terhubung!");
+    Serial.print("IP ESP32: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\n❌ Gagal terhubung ke WiFi!");
+  }
+
+  server.on("/", handleRoot);
+  server.on("/on", handleOn);
+  server.on("/off", handleOff);
+
+  server.begin();
+  Serial.println("Web server dimulai.");
+}
+
+void loop() {
+  server.handleClient();
+
+  // Auto reconnect WiFi jika terputus
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠️ WiFi terputus, mencoba sambung ulang...");
+    WiFi.disconnect();
+    WiFi.begin(ssid, password);
+    delay(1000);
+  }
+}
