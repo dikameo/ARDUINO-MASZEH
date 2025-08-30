@@ -1,0 +1,49 @@
+#include <WiFi.h>
+
+const char* ssid = "Banyu Langit";
+const char* password = "098765432";
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  Serial.println();
+  Serial.print("Menghubungkan ke WiFi: ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 30) {
+    delay(500);
+    Serial.print(".");
+    retries++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ WiFi Terhubung!");
+    Serial.print("IP ESP32: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("RSSI (Kekuatan Sinyal): ");
+    Serial.println(WiFi.RSSI());
+  } else {
+    Serial.println("\n❌ Gagal terhubung ke WiFi!");
+  }
+}
+
+void loop() {
+  // Cek status WiFi setiap 5 detik
+  static unsigned long lastCheck = 0;
+  if (millis() - lastCheck > 5000) {
+    lastCheck = millis();
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.print("WiFi OK - IP: ");
+      Serial.println(WiFi.localIP());
+    } else {
+      Serial.println("WiFi terputus, mencoba sambung ulang...");
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
+    }
+  }
+}
